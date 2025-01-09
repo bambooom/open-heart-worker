@@ -9,6 +9,7 @@
  * `Env` object can be regenerated with `npm run cf-typegen`.
  *
  * Learn more at https://developers.cloudflare.com/workers/
+ * KV Namespace: https://developers.cloudflare.com/workers/runtime-apis/kv/
  */
 
 interface Env {
@@ -28,17 +29,37 @@ function ensureEmoji(emoji: string) {
 // derived from https://gist.github.com/muan/388430d0ed03c55662e72bb98ff28f03
 export default {
 	async fetch(request, env, ctx): Promise<Response> {
-		if (request.method !== 'POST') return new Response('Wrong Method!');
-
 		const url = new URL(request.url);
 		const id = url.searchParams.get('id');
+
+		// Get: return count
+		if (request.method === 'GET') {
+			if (!id) return new Response('ID not found', { status: 200 });
+
+			const emoji = await env['open_heart_kv'].get(id);
+			if (emoji) {
+				const count = Number(await(env['open_heart_kv'].get(`${id}:${emoji}`)) || 0);
+				return Response.json({
+					[emoji]: count,
+				});
+			} else {
+				return new Response('emoji not found');
+			}
+		}
+
+		if (request.method !== 'POST') return new Response('Wrong Method!');
+
+		// POST: add count
 		const emoji = ensureEmoji(await request.text());
 
-		if (!id || !emoji) return new Response('not ok', { status: 500 });
+		if (!id || !emoji) return new Response('Input not found');
 
 		const key = `${id}:${emoji}`;
+		const val = await env['open_heart_kv'].get(id);
+		if (!val || val !== emoji) {
+			await env['open_heart_kv'].put(id, emoji);
+		}
 
-		// https://developers.cloudflare.com/workers/runtime-apis/kv/
 		const currentCount = Number(await(env['open_heart_kv'].get(key)) || 0);
 		await env['open_heart_kv'].put(key, (currentCount + 1).toString());
 
