@@ -32,27 +32,55 @@ export default {
 		const url = new URL(request.url);
 		const id = url.searchParams.get('id');
 
+		const CORS_HEADERS = {
+			'Access-Control-Allow-Headers': '*',
+			'Access-Control-Allow-Origin': '*',
+			'Access-Control-Allow-Methods': 'GET, POST',
+		};
+
 		// Get: return count
 		if (request.method === 'GET') {
-			if (!id) return new Response('ID not found', { status: 200 });
-
+			if (!id) {
+				return new Response('ID not found', {
+					status: 200,
+					headers: {
+						...CORS_HEADERS,
+					},
+				});
+			}
+			// @note: emojiString.match(/[\p{Emoji}]/gu) may use this to match multiple emojis
 			const emoji = await env['open_heart_kv'].get(id);
-			if (emoji) {
+			let resp: Response;
+			if (!emoji) {
+				resp = Response.json({});
+			} else {
 				const count = Number(await(env['open_heart_kv'].get(`${id}:${emoji}`)) || 0);
-				return Response.json({
+				resp = Response.json({
 					[emoji]: count,
 				});
-			} else {
-				return new Response('emoji not found');
 			}
+
+			resp.headers.set('Access-Control-Allow-Headers', '*');
+			resp.headers.set('Access-Control-Allow-Origin', '*');
+			resp.headers.set('Access-Control-Allow-Methods', 'GET, POST');
+			return resp;
 		}
 
-		if (request.method !== 'POST') return new Response('Wrong Method!');
+		// only GET & POST is allowed
+		if (request.method !== 'POST') return new Response('Wrong Method!', {
+			headers: {
+				...CORS_HEADERS,
+			},
+		});
 
 		// POST: add count
 		const emoji = ensureEmoji(await request.text());
 
-		if (!id || !emoji) return new Response('Input not found');
+		if (!id || !emoji) return new Response('Input not found', {
+			headers: {
+				...CORS_HEADERS,
+			},
+		});
 
 		const key = `${id}:${emoji}`;
 		const val = await env['open_heart_kv'].get(id);
@@ -63,6 +91,11 @@ export default {
 		const currentCount = Number(await(env['open_heart_kv'].get(key)) || 0);
 		await env['open_heart_kv'].put(key, (currentCount + 1).toString());
 
-		return new Response('ok', { status: 200 });
+		const resp = new Response('ok', { status: 200 });
+		resp.headers.set('Access-Control-Allow-Headers', '*');
+		resp.headers.set('Access-Control-Allow-Origin', '*');
+		resp.headers.set('Access-Control-Allow-Methods', 'GET, POST');
+
+		return resp;
 	},
 } satisfies ExportedHandler<Env>;
