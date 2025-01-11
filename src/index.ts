@@ -32,9 +32,11 @@ export default {
 		const url = new URL(request.url);
 		const id = url.searchParams.get('id');
 
+		const ORIGIN = 'https://zhuzi.dev';
+
 		const CORS_HEADERS = {
 			'Access-Control-Allow-Headers': '*',
-			'Access-Control-Allow-Origin': '*',
+			'Access-Control-Allow-Origin': ORIGIN,
 			'Access-Control-Allow-Methods': 'GET, POST',
 		};
 
@@ -61,7 +63,7 @@ export default {
 			}
 
 			resp.headers.set('Access-Control-Allow-Headers', '*');
-			resp.headers.set('Access-Control-Allow-Origin', '*');
+			resp.headers.set('Access-Control-Allow-Origin', ORIGIN);
 			resp.headers.set('Access-Control-Allow-Methods', 'GET, POST');
 			return resp;
 		}
@@ -93,7 +95,7 @@ export default {
 
 		const resp = new Response('ok', { status: 200 });
 		resp.headers.set('Access-Control-Allow-Headers', '*');
-		resp.headers.set('Access-Control-Allow-Origin', '*');
+		resp.headers.set('Access-Control-Allow-Origin', ORIGIN);
 		resp.headers.set('Access-Control-Allow-Methods', 'GET, POST');
 
 		return resp;
